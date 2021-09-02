@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { useState, useEffect } from "react";
 import Searchbar from "../Searchbar";
 import ImageGallery from "../ImageGallery";
 import Button from "../Button";
@@ -18,95 +18,65 @@ const Status = {
   REJECTED: "rejected",
 };
 
-class App extends Component {
-  state = {
-    searchQuery: "",
-    pageNumber: 1,
-    images: [],
-    status: Status.IDLE,
-    morePageImages: false,
-    error: null,
-  };
+function App() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [images, setImages] = useState([]);
+  const [moreImagesPerPage, setMoreImagesPerPage] = useState(false);
+  const [status, setStatus] = useState(Status.IDLE);
+  const [error, setError] = useState(null);
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, pageNumber } = this.state;
+  useEffect(() => {
+    if (searchQuery !== '') getImages(searchQuery, pageNumber);
+  }, [searchQuery, pageNumber]);
 
-    if (
-      prevState.searchQuery === this.state.searchQuery ||
-      !this.state.searchQuery
-    ) {
-      return;
-    }
+  const getImages = (searchQuery, pageNumber) => {
+    fetchImages(searchQuery, pageNumber)
+      .then((images) => {
+      setImages((prevImages) => [...prevImages, ...images.hits]);
+  setStatus(Status.RESOLVED);
 
-    this.setState({ status: Status.PENDING, pageNumber: 1 });
-    try {
-      const images = await fetchImages(searchQuery, pageNumber);
-
-      if (images.total === 0) {
-        this.setState({
-          status: Status.REJECTED,
-          error: "ups, no images!",
-        });
-        return;
-      }
-
-      const morePageImages = images.total > IMAGES_PER_PAGE;
-      this.setState({
-        images: images.hits,
-        status: Status.RESOLVED,
-        morePageImages,
-      });
-    } catch (error) {
-      this.setState({ error: error.message, status: Status.REJECTED });
-    }
+  if (images.total === 0) {
+    setStatus(Status.REJECTED);
+    setError('Ups,no images!');
+    return;
   }
+   
+  images.total > IMAGES_PER_PAGE
+    ? setMoreImagesPerPage(true)
+    : setMoreImagesPerPage(false);
+  
+  if (pageNumber > 1) {
+    scrollDown();
+  }
+})
+    .catch ((error) => {
+  setError(error.message);
+  setStatus(Status.REJECTED);
+   });
+};
 
-  onSearchFormSubmit = (searchQuery) => {
-    this.setState({ searchQuery, pageNumber: 1 });
+const onSearchFormSubmit = (searchQuery) => {
+  setSearchQuery(searchQuery);
+  setImages([]);
+  setPageNumber(1);
 
     if (searchQuery === "") {
-      this.setState({
-        status: Status.REJECTED,
-        error: "ups, You need enter yout request!",
-      });
+      setStatus(Status.REJECTED);
+      setError('Ups, enter yor request :)');
+    
     }
   };
 
-  onLoadMoreBtnClick = async () => {
-    const { searchQuery, pageNumber } = this.state;
-    this.setState({
-      status: Status.PENDING,
-      pageNumber: pageNumber + 1,
-    });
-
-    try {
-      const images = await fetchImages(searchQuery, pageNumber + 1);
-
-      this.setState((state) => {
-        const newStateImages = [...state.images, ...images.hits];
-        const morePageImages = images.total > newStateImages.length;
-
-        return {
-          ...state,
-          images: newStateImages,
-          morePageImages,
-          status: Status.RESOLVED,
-        };
-      });
-
-      scrollDown();
-    } catch (error) {
-      this.setState({ error: error.message, status: Status.REJECTED });
-    }
-  };
-
-  render() {
-    const { images, morePageImages, status, error } = this.state;
+const onLoadMoreBtnClick = () => {
+  setStatus(Status.PENDING);
+  setPageNumber((prevPageNumber) => prevPageNumber + 1);
+};
 
     return (
       <StyledApp>
         <Searchbar>
-          <SearchForm getFormData={this.onSearchFormSubmit} />
+          <SearchForm getFormData={onSearchFormSubmit} />
         </Searchbar>
         <Section theme={theme}>
           <Container>
@@ -117,10 +87,10 @@ class App extends Component {
             {status === "resolved" && (
               <>
                 <ImageGallery images={images} />
-                {morePageImages && (
+                {moreImagesPerPage && (
                   <Button
                     label="Load more"
-                    onLoadMoreBtnClick={this.onLoadMoreBtnClick}
+                    onLoadMoreBtnClick={onLoadMoreBtnClick}
                   />
                 )}
               </>
@@ -130,6 +100,6 @@ class App extends Component {
       </StyledApp>
     );
   }
-}
+
 
 export default App;
