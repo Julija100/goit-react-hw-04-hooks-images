@@ -1,46 +1,43 @@
-import { Component } from "react";
+import { useState} from "react";
 import PropTypes from "prop-types";
 import { StyledSearchForm, StyledSearchFormInput } from "./StyledSearchForm";
 import IconButton from "../IconButton/IconButton";
 import { ReactComponent as IconSearch } from "../../images/search.svg";
 
-class SearchForm extends Component {
-  state = {
-    searchQuery: "",
+function SearchForm ({getFormData}) {
+  const [searchQuery, setSearchQuery] =  useState('');
+
+  const onInputChange = (e) => {
+    setSearchQuery(e.target.value.toLowerCase());
   };
 
-  static propTypes = {
-    getFormData: PropTypes.func.isRequired,
-  };
-
-  onInputChange = (e) => {
-    this.setState({ searchQuery: e.target.value.toLowerCase()});
-  };
-
-  onFormSubmit = (e) => {
+  const onFormSubmit = (e) => {
     e.preventDefault();
 
-    this.props.getFormData(this.state.searchQuery.trim());
-    this.setState({ searchQuery: "" });
+  getFormData(searchQuery.trim());
+    setSearchQuery ("");
   };
 
-  render() {
+
     return (
-      <StyledSearchForm onSubmit={this.onFormSubmit}>
+      <StyledSearchForm onSubmit={onFormSubmit}>
         <StyledSearchFormInput
           type="text"
           autoComplete="off"
           autoFocus
           placeholder="Search images and photos"
-          value={this.state.searchQuery}
-          onChange={this.onInputChange}
+          value={searchQuery}
+          onChange={onInputChange}
         />
         <IconButton type="submit" ariaLabel="search">
           <IconSearch />
         </IconButton>
       </StyledSearchForm>
     );
-  }
 }
+SearchForm.propTypes = {
+    getFormData: PropTypes.func.isRequired,
+  }
+
 
 export default SearchForm;
